@@ -8,6 +8,9 @@ public class Percolation {
     private int gridN;
     
     public Percolation(int n) { // create n-by-n grid, with all sites blocked
+        if (n < 1)
+            throw new IllegalArgumentException("Wrong grid size!");
+
         qu = new WeightedQuickUnionUF(n*n + 2); // extra top and bottom sites
         quTop = new WeightedQuickUnionUF(n*n + 1);
         
@@ -98,6 +101,5 @@ public class Percolation {
     
     public static void main(String[] args)   // test client (optional)
     {
-        
     }
 }
