@@ -15,7 +15,6 @@ public class PercolationStats {
 
         double[] fractions = new double[trials];
 
-        StdRandom.setSeed(n*trials);
         for (int i = 0; i < trials; i++)
         {
             Percolation p = new Percolation(n);
@@ -26,7 +25,7 @@ public class PercolationStats {
                 int row = StdRandom.uniform(1, n + 1);
                 int col = StdRandom.uniform(1, n + 1);
 
-                if (!p.isOpen(row, col)){
+                if (!p.isOpen(row, col)) {
                     p.open(row, col);
                     sites++;
                 }
@@ -68,6 +67,7 @@ public class PercolationStats {
 
         int n = Integer.parseInt(args[0]);
         int trials = Integer.parseInt(args[1]);
+
         PercolationStats ps = new PercolationStats(n, trials);
 
         StdOut.println("mean: " + ps.mean());
