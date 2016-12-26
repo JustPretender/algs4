@@ -1,12 +1,11 @@
 import edu.princeton.cs.algs4.Queue;
 import edu.princeton.cs.algs4.Point2D;
 import edu.princeton.cs.algs4.RectHV;
-import edu.princeton.cs.algs4.StdOut;
 import edu.princeton.cs.algs4.StdDraw;
 
 public class KdTree {
-    private static final int OR_X = 0;
-    private static final int OR_Y = 1;
+    private static final int ORIENTATION_X = 0;
+    private static final int ORIENTATION_Y = 1;
 
     private Node root;
 
@@ -49,31 +48,36 @@ public class KdTree {
         if (null == p)
             throw new NullPointerException("an argument is null");
 
-        root = put(root, p, OR_X, 0.0, 0.0, 1.0, 1.0);
+        // Start from the root, with X-asix orientation and a 1x1 grid
+        root = put(root, p, ORIENTATION_X, 0.0, 0.0, 1.0, 1.0);
     }
 
     private Node put(Node x, Point2D p, int orientation, double xmin, double ymin, double xmax, double ymax) {
         // Create a new node if we reach the end
         if (null == x) return new Node(p, 1, new RectHV(xmin, ymin, xmax, ymax));
 
-        // If points are equal - do not insert p
+        // If points are equal - do not continue
         if (p.equals(x.p)) return x;
 
         double nX = x.p.x();
         double nY = x.p.y();
 
-        // Compare depending on the current orientation
-        if (OR_X == orientation) {
+        // Compare using X-coordinates and define
+        // a rectangle within P's X-coordinate bounds
+        if (ORIENTATION_X == orientation) {
             if (Double.compare(p.x(), nX) < 0) {
-                x.lb = put(x.lb, p, OR_Y, xmin, ymin, nX, ymax);
-            } else {
-                x.rt = put(x.rt, p, OR_Y, nX, ymin, xmax, ymax);
+                x.lb = put(x.lb, p, ORIENTATION_Y, xmin, ymin, nX, ymax);
             }
-        } else {
+            else {
+                x.rt = put(x.rt, p, ORIENTATION_Y, nX, ymin, xmax, ymax);
+            }
+        }
+        else {
             if (Double.compare(p.y(), nY) < 0) {
-                x.lb = put(x.lb, p, OR_X, xmin, ymin, xmax, nY);
-            } else {
-                x.rt = put(x.rt, p, OR_X, xmin, nY, xmax, ymax);
+                x.lb = put(x.lb, p, ORIENTATION_X, xmin, ymin, xmax, nY);
+            }
+            else {
+                x.rt = put(x.rt, p, ORIENTATION_X, xmin, nY, xmax, ymax);
             }
         }
 
@@ -81,60 +85,64 @@ public class KdTree {
         return x;
     }
 
-    private Point2D get(Node x, Point2D p, int orientation) {
-        if (x == null) return null;
+    private boolean contains(Node x, Point2D p, int orientation) {
+        if (x == null) return false;
 
-        if (p.equals(x.p)) return x.p;
+        if (p.equals(x.p)) return true;
 
         double nX = x.p.x();
         double nY = x.p.y();
-        Node where = null;
+        Node from = null;
+        boolean contains = false;
 
-        // Compare depending on the current orientation
-        if (OR_X == orientation) {
-            orientation = OR_Y;
+        // Compare according to the current orientation
+        if (ORIENTATION_X == orientation) {
             if (Double.compare(p.x(), nX) < 0) {
-                where = x.lb;
-            } else {
-                where = x.rt;
+                contains = contains(x.lb, p, ORIENTATION_Y);
             }
-        } else {
-            orientation = OR_X;
+            else {
+                contains = contains(x.rt, p, ORIENTATION_Y);
+            }
+        }
+        else {
             if (Double.compare(p.y(), nY) < 0) {
-                where = x.lb;
-            } else {
-                where = x.rt;
+                contains = contains(x.lb, p, ORIENTATION_X);
+            }
+            else {
+                contains = contains(x.rt, p, ORIENTATION_X);
             }
         }
 
-        return get(where, p, orientation);
+        return contains;
     }
 
     public boolean contains(Point2D p) {            // does the set contain point p?
         if (null == p)
             throw new NullPointerException("an argument is null");
 
-        return get(root, p, OR_X) != null;
+        return contains(root, p, ORIENTATION_X);
     }
 
     public void draw() {                         // draw all points to standard draw
-        draw(root, OR_X);
+        draw(root, ORIENTATION_X);
     }
 
     private void draw(Node x, int orientation) {
         if (null == x) return;
 
-        StdDraw.setPenColor((OR_X == orientation) ? StdDraw.RED : StdDraw.BLUE);
         StdDraw.setPenRadius(0.005);
 
-        if (OR_X == orientation) {
+        if (ORIENTATION_X == orientation) {
+            StdDraw.setPenColor(StdDraw.RED);
             StdDraw.line(x.p.x(), x.rect.ymin(), x.p.x(), x.rect.ymax());
-            draw(x.lb, OR_Y);
-            draw(x.rt, OR_Y);
-        } else {
+            draw(x.lb, ORIENTATION_Y);
+            draw(x.rt, ORIENTATION_Y);
+        }
+        else {
+            StdDraw.setPenColor(StdDraw.BLUE);
             StdDraw.line(x.rect.xmin(), x.p.y(), x.rect.xmax(), x.p.y());
-            draw(x.lb, OR_X);
-            draw(x.rt, OR_X);
+            draw(x.lb, ORIENTATION_X);
+            draw(x.rt, ORIENTATION_X);
         }
 
         StdDraw.setPenColor(StdDraw.BLACK);
@@ -168,39 +176,47 @@ public class KdTree {
         if (null == p)
             throw new NullPointerException("an argument is null");
 
+        // If there are no points - there's no nearest point either
         if (isEmpty())
             return null;
 
-        Point2D nearestP = nearest(root, p, root.p, OR_X);
-        return nearestP;
+        return nearest(root, p, root.p, ORIENTATION_X);
     }
 
-    private Point2D nearest(Node x, Point2D p, Point2D closest, int orientation) {
-        if (null == x) return closest;
+    private Point2D nearest(Node x, Point2D p, Point2D nearest, int orientation) {
+        if (null == x) return nearest;
 
-        if (Double.compare(x.rect.distanceSquaredTo(p), p.distanceSquaredTo(closest)) > 0) return closest;
+        // Don't check segments which are too far from the p
+        if (Double.compare(x.rect.distanceSquaredTo(p), p.distanceSquaredTo(nearest)) > 0)
+            return nearest;
 
-        if (Double.compare(x.p.distanceSquaredTo(p), p.distanceSquaredTo(closest)) < 0) closest = x.p;
+        // Found a closer point
+        if (Double.compare(x.p.distanceSquaredTo(p), p.distanceSquaredTo(nearest)) < 0)
+            nearest = x.p;
 
-        if (OR_X == orientation) {
+        // Look for the nearest point according to the orientation
+        if (ORIENTATION_X == orientation) {
             if (Double.compare(p.x(), x.p.x()) < 0) {
-                closest = nearest(x.lb, p, closest, OR_Y);
-                closest = nearest(x.rt, p, closest, OR_Y);
-            } else {
-                closest = nearest(x.rt, p, closest, OR_Y);
-                closest = nearest(x.lb, p, closest, OR_Y);
+                nearest = nearest(x.lb, p, nearest, ORIENTATION_Y);
+                nearest = nearest(x.rt, p, nearest, ORIENTATION_Y);
             }
-        } else {
+            else {
+                nearest = nearest(x.rt, p, nearest, ORIENTATION_Y);
+                nearest = nearest(x.lb, p, nearest, ORIENTATION_Y);
+            }
+        }
+        else {
             if (Double.compare(p.y(), x.p.y()) < 0) {
-                closest = nearest(x.lb, p, closest, OR_X);
-                closest = nearest(x.rt, p, closest, OR_X);
-            } else {
-                closest = nearest(x.rt, p, closest, OR_X);
-                closest = nearest(x.lb, p, closest, OR_X);
+                nearest = nearest(x.lb, p, nearest, ORIENTATION_X);
+                nearest = nearest(x.rt, p, nearest, ORIENTATION_X);
+            }
+            else {
+                nearest = nearest(x.rt, p, nearest, ORIENTATION_X);
+                nearest = nearest(x.lb, p, nearest, ORIENTATION_X);
             }
         }
 
-        return closest;
+        return nearest;
     }
 
     public static void main(String[] args) {                 // unit testing of the methods (optional)
