@@ -1,0 +1,235 @@
+# Local variables:
+# eval: (add-hook 'after-save-hook 'org-babel-execute-buffer)
+# end:
+
+* Intro
+
+* Implementation
+** MoveToFront
+   #+HEADERS: :classname MoveToFront
+   #+BEGIN_SRC java -i :results output :exports code :results silent
+import edu.princeton.cs.algs4.BinaryStdIn;
+import edu.princeton.cs.algs4.BinaryStdOut;
+
+public class MoveToFront {
+        private static final int RADIX = 256;
+
+        // apply move-to-front encoding, reading from standard input and writing to standard output
+        public static void encode() {
+                char[] alphabet = new char[RADIX]; // Extended ASCII
+                for (char i = 0; i < alphabet.length; i++) {
+                        alphabet[i] = i;
+                }
+
+                while (!BinaryStdIn.isEmpty()) {
+                        char c = BinaryStdIn.readChar();
+
+                        // First look for a match starting from the end of the alphabet
+                        int index = 0;
+                        for (; index < RADIX && !(c == alphabet[index]); index++);
+                        // Output an index of a matching character
+                        BinaryStdOut.write((char) index);
+                        // Shift the alphabet right
+                        System.arraycopy(alphabet, 0, alphabet, 1, index);
+                        // and move the character to front
+                        alphabet[0] = c;
+                }
+
+                BinaryStdOut.close();
+        }
+
+        // apply move-to-front decoding, reading from standard input and writing to standard output
+        public static void decode() {
+                char[] alphabet = new char[RADIX]; // Extended ASCII
+                for (char i = 0; i < alphabet.length; i++) {
+                        alphabet[i] = i;
+                }
+
+                while (!BinaryStdIn.isEmpty()) {
+                        int index = BinaryStdIn.readChar();
+                        char c = alphabet[index];
+
+                        // Output a matching character
+                        BinaryStdOut.write(c);
+                        // Shift the alphabet right
+                        while (index > 0) {
+                                alphabet[index] = alphabet[--index];
+                        }
+                        // and move the character to front
+                        alphabet[0] = c;
+                }
+
+                BinaryStdOut.close();
+                BinaryStdIn.close();
+        }
+
+        // if args[0] is '-', apply move-to-front encoding
+        // if args[0] is '+', apply move-to-front decoding
+        public static void main(String[] args) {
+                if (args[0].equals("-")) MoveToFront.encode();
+                if (args[0].equals("+")) MoveToFront.decode();
+        }
+}
+   #+END_SRC
+** Circular Suffix Array
+   #+HEADERS: :classname CircularSuffixArray
+   #+BEGIN_SRC java -i :results output :exports code :results silent
+import edu.princeton.cs.algs4.BinaryStdIn;
+import edu.princeton.cs.algs4.StdOut;
+import java.util.Arrays;
+
+public class CircularSuffixArray {
+        private final Suffix[] suffixes;
+        private final int N;
+
+        // circular suffix array of s
+        public CircularSuffixArray(String s) {
+                if (s == null) {
+                        throw new java.lang.IllegalArgumentException();
+                }
+
+                N = s.length();
+                suffixes = new Suffix[N];
+                for (int index = 0; index < N; index++) {
+                        suffixes[index] = new Suffix(s, index);
+                }
+                Arrays.sort(suffixes);
+        }
+
+        private static class Suffix implements Comparable<Suffix> {
+                private final String text;
+                private final int index;
+
+                private Suffix(String text, int index) {
+                        this.text = text;
+                        this.index = index;
+                }
+                private int length() {
+                        return text.length() - index;
+                }
+                private char charAt(int i) {
+                        return text.charAt((index + i) % text.length());
+                }
+
+                public int compareTo(Suffix that) {
+                        if (this == that) return 0;  // optimization
+                        int n = text.length();
+                        for (int i = 0; i < n; i++) {
+                                if (this.charAt(i) < that.charAt(i)) return -1;
+                                if (this.charAt(i) > that.charAt(i)) return +1;
+                        }
+                        return this.length() - that.length();
+                }
+
+                public String toString() {
+                        return text.substring(index) + text.substring(0, index);
+                }
+        }
+
+        // length of s
+        public int length() {
+                return N;
+        }
+
+        // returns index of ith sorted suffix
+        public int index(int i) {
+                if (i < 0 || i >= N) {
+                        throw new java.lang.IllegalArgumentException();
+                }
+
+                return N - suffixes[i].length();
+        }
+
+        // unit testing (required)
+        public static void main(String[] args) {
+                String s;
+                if (args.length == 1) {
+                        s = args[0];
+                } else {
+                        s = BinaryStdIn.readString();
+                }
+
+                StdOut.println("  i\tOriginal Suffixes\t\tSortedSuffixes\tindex[i]");
+                StdOut.println("--------------------------------------------------");
+                CircularSuffixArray cfa = new CircularSuffixArray(s);
+
+                for (int index = 0; index < cfa.N; index++) {
+                        StdOut.printf("%3d\t%3s\t\t\t\t%3s\t\t%3d\n", index, s.substring(index) + s.substring(0, index), cfa.suffixes[index], cfa.index(index));
+                }
+
+                StdOut.println(cfa.length());
+        }
+}
+   #+END_SRC
+
+** BurrowsWheeler
+   #+HEADERS: :classname BurrowsWheeler
+   #+BEGIN_SRC java -i :results output :exports code :results silent
+import edu.princeton.cs.algs4.BinaryStdIn;
+import edu.princeton.cs.algs4.BinaryStdOut;
+
+public class BurrowsWheeler {
+        // apply Burrows-Wheeler transform, reading from standard input and writing to standard output
+        public static void transform() {
+                String s = BinaryStdIn.readString();
+                CircularSuffixArray cfa = new CircularSuffixArray(s);
+
+                int first = 0;
+                char[] result = new char[cfa.length()];
+                for (int i = 0; i < cfa.length(); i++) {
+                        int index = cfa.index(i);
+                        if (index == 0) {
+                                first = i;
+                                result[i] = s.charAt(cfa.length() - 1);
+                        } else {
+                                result[i] = s.charAt(index - 1);
+                        }
+                }
+
+                BinaryStdOut.write(first);
+                for (int i = 0; i < result.length; i++) {
+                        BinaryStdOut.write(result[i]);
+                }
+                BinaryStdOut.flush();
+        }
+
+        // apply Burrows-Wheeler inverse transform, reading from standard input and writing to standard output
+        public static void inverseTransform() {
+                int first = BinaryStdIn.readInt();
+                String encoded = BinaryStdIn.readString();
+                int[] next = new int[encoded.length()];
+                int[] count = new int[256 + 1];
+
+                // First count number of appearences of each character
+                for (int i = 0; i < encoded.length(); i++) {
+                        count[encoded.charAt(i) + 1]++;
+                }
+
+                // Now count the distance between distinct characters
+                // in _next[]_
+                for (int r = 0; r < count.length - 1; r++) {
+                        count[r + 1] += count[r];
+                }
+
+                // build the _next[]_ from the encoded string (t)
+                for (int i = 0; i < encoded.length(); i++) {
+                        next[count[encoded.charAt(i)]++] = i;
+                }
+
+                // finally decode the string using _next[]_
+                for (int i = 0; i < encoded.length(); i++) {
+                        first = next[first];
+                        BinaryStdOut.write(encoded.charAt(first));
+                }
+
+                BinaryStdOut.flush();
+        }
+
+        // if args[0] is '-', apply Burrows-Wheeler transform
+        // if args[0] is '+', apply Burrows-Wheeler inverse transform
+        public static void main(String[] args) {
+                if (args[0].equals("-")) BurrowsWheeler.transform();
+                if (args[0].equals("+")) BurrowsWheeler.inverseTransform();
+        }
+}
+   #+END_SRC
